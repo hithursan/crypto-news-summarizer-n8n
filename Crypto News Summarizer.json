@@ -1,0 +1,325 @@
+{
+  "name": "Crypto News Summarizer",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        -112
+      ],
+      "id": "e7e4bea5-41ca-46d7-99a9-f4c801de428a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        672,
+        -112
+      ],
+      "id": "b080819b-a6c7-42f8-8722-440bf861d076",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "url": "https://gnews.io/api/v4/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "Crypto"
+            },
+            {
+              "name": "lang",
+              "value": "en"
+            },
+            {
+              "name": "max",
+              "value": "5"
+            },
+            {
+              "name": "apikey",
+              "value": "={{ $env.GNEWS_API_KEY }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        -16
+      ],
+      "id": "21cb9311-c7a2-4318-9e65-4cadb3117639",
+      "name": "Get GNews Articles"
+    },
+    {
+      "parameters": {
+        "url": "https://newsapi.org/v2/everything",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "apiKey",
+              "value": "={{ $env.NEWSAPI_KEY }}"
+            },
+            {
+              "name": "q",
+              "value": "Crypto"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            },
+            {
+              "name": "pageSize",
+              "value": "5"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        -208
+      ],
+      "id": "1588904b-ca9b-42de-9734-97ac60efa203",
+      "name": "NewsAPI Articles"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98bbb510-652f-40af-94b1-f5bc86d670c0",
+              "name": "articles",
+              "value": "={{ $json.articles }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        -208
+      ],
+      "id": "f9f0ffad-4885-4e6b-90d0-ff3d6641bae0",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3cb9e968-2ec0-41b3-a321-03d7067e030b",
+              "name": "articles",
+              "value": "={{ $json.articles }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        -16
+      ],
+      "id": "b15b7937-12ef-4e58-86e3-ed1eda94e3e7",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "model": "qwen/qwen3.8-27b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        976,
+        128
+      ],
+      "id": "08e5ce5f-1ebe-4e2b-a74c-a386b0bdb647",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "OIIQY2W17CXBVqCz",
+          "name": "Groq account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1248,
+        -112
+      ],
+      "id": "3869b7de-a14b-4aae-aa8c-7468c6815eb2",
+      "name": "Send a text message",
+      "webhookId": "a16c9626-dd77-4d65-8cea-1e86c63bdc83",
+      "credentials": {
+        "telegramApi": {
+          "id": "LsorSSu8vUo8757h",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=** Select Top Articles **\nFrom {{ $json.articles }}, choose the 15 most relevant articles related to Crypto technology advancements, tools, research, and applications.\n\n** Summarize Clearly **\nWrite in clear, professional, and readable language, summarizing the main point of each article in 1-2 short sentences.\n\n** Include Links **\nAfter each summary, add the article's URL for readers to explore more.\n\n** Add the Date **\nBegin the summary with today's date: {{ $now.format('yyyy/MM/dd') }}",
+        "options": {
+          "systemMessage": "** Output Format **\nOnly return the summary in plain text – no explanations or additional formatting. \nKeep the response up to 2000 character"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        -112
+      ],
+      "id": "80e60920-4330-4fcb-b7db-2b9f7953d43f",
+      "name": "Crypto News Summarizer"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get GNews Articles",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "NewsAPI Articles",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get GNews Articles": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NewsAPI Articles": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Crypto News Summarizer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Crypto News Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crypto News Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "timeSavedMode": "fixed",
+    "timezone": "Asia/Colombo",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "e1050223-9739-4496-8dad-c3593de4e4e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3ba477be035fb9c2bd1ff6e3d281337471ccc47f3d005ddc01bb0ec599e3a246"
+  },
+  "nodeGroups": [],
+  "id": "R44sKldexJPiEvOP",
+  "tags": []
+}
